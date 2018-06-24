@@ -1,11 +1,11 @@
-"""Certbot Route53 authenticator plugin."""
+"""Certbot Nsof Route53 authenticator plugin."""
 import collections
 import logging
 import time
-
 import boto3
 import zope.interface
 from botocore.exceptions import NoCredentialsError, ClientError
+import argparse
 
 from certbot import errors
 from certbot import interfaces
@@ -16,9 +16,10 @@ from acme.magic_typing import DefaultDict, List, Dict # pylint: disable=unused-i
 logger = logging.getLogger(__name__)
 
 INSTRUCTIONS = (
-    "To use certbot-dns-route53, configure credentials as described at "
+    "To use certbot-dns-nsof, configure credentials as described at "
     "https://boto3.readthedocs.io/en/latest/guide/configuration.html#best-practices-for-configuring-credentials "  # pylint: disable=line-too-long
     "and add the necessary permissions for Route53 access.")
+
 
 @zope.interface.implementer(interfaces.IAuthenticator)
 @zope.interface.provider(interfaces.IPluginFactory)
@@ -41,6 +42,14 @@ class Authenticator(dns_common.DNSAuthenticator):
     def more_info(self):  # pylint: disable=missing-docstring,no-self-use
         return "Solve a DNS01 challenge using AWS Route53"
 
+    @classmethod
+    def add_parser_arguments(cls, add):
+        add("mc_certbot_challenge", "-MC_CHALLENGE", default=False,
+            action=_McIsCertbotChallenge,
+            help="In case you want to use it for Metaconnect certbot domain validation"
+                 "add this parameter with value of True. It will change "
+                 "the domain name of the TXT record.")
+
     def _setup_credentials(self):
         pass
 
@@ -49,7 +58,6 @@ class Authenticator(dns_common.DNSAuthenticator):
 
     def perform(self, achalls):
         self._attempt_cleanup = True
-
         try:
             change_ids = [
                 self._change_txt_record("UPSERT",
@@ -118,6 +126,10 @@ class Authenticator(dns_common.DNSAuthenticator):
         else:
             rrecords.append(challenge)
 
+
+        name = self._calculate_name(validation_domain_name)
+        logger.info('validation_domain_name: %s, name: %s, action: %s',
+                     validation_domain_name, name, action)
         response = self.r53.change_resource_record_sets(
             HostedZoneId=zone_id,
             ChangeBatch={
@@ -126,7 +138,7 @@ class Authenticator(dns_common.DNSAuthenticator):
                     {
                         "Action": action,
                         "ResourceRecordSet": {
-                            "Name": validation_domain_name,
+                            "Name": name,
                             "Type": "TXT",
                             "TTL": self.ttl,
                             "ResourceRecords": rrecords,
@@ -149,3 +161,22 @@ class Authenticator(dns_common.DNSAuthenticator):
         raise errors.PluginError(
             "Timed out waiting for Route53 change. Current status: %s" %
             response["ChangeInfo"]["Status"])
+
+    def _calculate_name(self, validation_domain_name):
+        name = validation_domain_name
+        if self.conf("mc_certbot_challenge"):
+            name = name.replace('_acme-', '', 1)
+            name = name.replace('.', '-', 1)
+        return name
+
+
+class _McIsCertbotChallenge(argparse.Action):
+    """Action class for parsing the is_certbot_challange parameter."""
+
+    def __call__(self, parser, namespace, is_certbot_challenge,
+                 option_string=None):
+        if is_certbot_challenge:
+            # format of the name in order to fetch it with self.conf() is:
+            # <plugin_name>:<plugin_entry_point_name>_<param_name>
+            # (plugin name is with _ instead of -)
+            setattr(namespace, 'certbot_dns_nsof:nsof_mc_certbot_challenge', True)

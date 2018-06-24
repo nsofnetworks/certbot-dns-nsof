@@ -1,7 +1,7 @@
 from setuptools import setup
 from setuptools import find_packages
 
-version = '0.26.0.dev0'
+version = '1'
 
 # Remember to update local-oldest-requirements.txt when changing the minimum
 # acme/certbot version.
@@ -15,12 +15,12 @@ install_requires = [
 ]
 
 setup(
-    name='certbot-dns-route53',
+    name='certbot-dns-nsof',
     version=version,
-    description="Route53 DNS Authenticator plugin for Certbot",
-    url='https://github.com/certbot/certbot',
-    author="Certbot Project",
-    author_email='client-dev@letsencrypt.org',
+    description="Meta networks route53 DNS Authenticator plugin for Certbot",
+    url="https://www.metanetworks.com",
+    author="Yuval Mishan",
+    author_email='yuval@metanetworks.com',
     license='Apache License 2.0',
     python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*',
     classifiers=[
@@ -46,12 +46,10 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=install_requires,
-    keywords=['certbot', 'route53', 'aws'],
+    keywords=['certbot', 'route53', 'aws', 'nsof'],
     entry_points={
         'certbot.plugins': [
-            'dns-route53 = certbot_dns_route53.dns_route53:Authenticator',
-            'certbot-route53:auth = certbot_dns_route53.authenticator:Authenticator'
+            'nsof = certbot_dns_nsof.nsof_dns_route53:Authenticator',
         ],
     },
-    test_suite='certbot_dns_route53',
 )
