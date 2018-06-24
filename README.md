@@ -1,4 +1,4 @@
-## Route53 plugin for Let's Encrypt client
+## Meta Networks Route53 plugin for Let's Encrypt client
 
 ### Before you start
 
@@ -26,10 +26,21 @@ Make sure you have access to AWS's Route53 service, either through IAM roles or
 via `.aws/credentials`. Check out
 [sample-aws-policy.json](examples/sample-aws-policy.json) for the necessary permissions.
 
-To generate a certificate:
+To generate a certificate, using regular certbot challenge:
 ```
-certbot certonly \
-  -n --agree-tos --email DEVOPS@COMPANY.COM \
-  --dns-route53 \
-  -d MY.DOMAIN.NAME
+certbot certonly --non-interactive --text --agree-tos \
+--no-eff-email --server https://acme-staging-v02.api.letsencrypt \
+.org/directory --force-renew --authenticator certbot-dns-nsof:nsof \
+--cert-name mcuv-eu --email letsencrypt-admin@metanetworks.com \
+-d MY.DOMAIN.NAME
+```
+
+To generate a certificate for MetaConnect node:
+```
+certbot certonly --non-interactive --text --agree-tos \
+--no-eff-email --server https://acme-staging-v02.api.letsencrypt \
+.org/directory --force-renew --authenticator certbot-dns-nsof:nsof \
+-MC_CHALLENGE true --cert-name mcuv-eu \
+--email  letsencrypt-admin@metanetworks.com \
+-d MY.DOMAIN.NAME
 ```
