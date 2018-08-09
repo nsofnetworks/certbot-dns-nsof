@@ -110,9 +110,12 @@ class Authenticator(dns_common.DNSAuthenticator):
         return zones[0][1]
 
     def _change_txt_record(self, action, validation_domain_name, validation):
-        zone_id = self._find_zone_id_for_domain(validation_domain_name)
+        name = self._calculate_name(validation_domain_name)
+        logger.info('validation_domain_name: %s, name: %s, action: %s',
+                     validation_domain_name, name, action)
 
-        rrecords = self._resource_records[validation_domain_name]
+        zone_id = self._find_zone_id_for_domain(name)
+        rrecords = self._resource_records[name]
         challenge = {"Value": '"{0}"'.format(validation)}
         if action == "DELETE":
             # Remove the record being deleted from the list of tracked records
@@ -126,10 +129,6 @@ class Authenticator(dns_common.DNSAuthenticator):
         else:
             rrecords.append(challenge)
 
-
-        name = self._calculate_name(validation_domain_name)
-        logger.info('validation_domain_name: %s, name: %s, action: %s',
-                     validation_domain_name, name, action)
         response = self.r53.change_resource_record_sets(
             HostedZoneId=zone_id,
             ChangeBatch={
@@ -165,8 +164,10 @@ class Authenticator(dns_common.DNSAuthenticator):
     def _calculate_name(self, validation_domain_name):
         name = validation_domain_name
         if self.conf("mc_certbot_challenge"):
+            parts = validation_domain_name.split('.')
+            parts.insert(2, 'i')
+            name = ".".join(parts)
             name = name.replace('_acme-', '', 1)
-            name = name.replace('.', '-', 1)
         return name
 
 
