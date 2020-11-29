@@ -44,8 +44,7 @@ class Authenticator(dns_common.DNSAuthenticator):
 
     @classmethod
     def add_parser_arguments(cls, add):
-        add("mc_certbot_challenge", "-MC_CHALLENGE", default=False,
-            action=_McIsCertbotChallenge,
+        add("nsof_mc_certbot_challenge", "-MC_CHALLENGE", default=False,
             help="In case you want to use it for Metaconnect certbot domain validation"
                  "add this parameter with value of True. It will change "
                  "the domain name of the TXT record.")
@@ -163,21 +162,10 @@ class Authenticator(dns_common.DNSAuthenticator):
 
     def _calculate_name(self, validation_domain_name):
         name = validation_domain_name
-        if self.conf("mc_certbot_challenge"):
+        if self.conf("nsof_mc_certbot_challenge") and \
+           self.conf("nsof_mc_certbot_challenge").lower() == 'true':
             parts = validation_domain_name.split('.')
             parts.insert(2, 'i')
             name = ".".join(parts)
             name = name.replace('_acme-', '', 1)
         return name
-
-
-class _McIsCertbotChallenge(argparse.Action):
-    """Action class for parsing the is_certbot_challange parameter."""
-
-    def __call__(self, parser, namespace, is_certbot_challenge,
-                 option_string=None):
-        if is_certbot_challenge:
-            # format of the name in order to fetch it with self.conf() is:
-            # <plugin_name>:<plugin_entry_point_name>_<param_name>
-            # (plugin name is with _ instead of -)
-            setattr(namespace, 'certbot_dns_nsof:nsof_mc_certbot_challenge', True)
